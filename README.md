@@ -1,5 +1,5 @@
 A lightweight implementation of the encoder-transformer with 1-D convolutional projections of querries, keys and values with sketched learnable kernel functions on the CMAPSS NASA dataset. 
-I am currently preparing an article about this method. Better to use with FD002 and FD004 as it shows both accuracy and latency improvement on this subsets in comparison with the softmax function.
+I am currently preparing an article about this method. Better to use with FD002 and FD004 as it shows both accuracy and latency improvement on these subsets in comparison with the softmax function.
 
 ![image](https://github.com/user-attachments/assets/7e9226a0-0537-4e89-b943-c1697fb23977)
 
