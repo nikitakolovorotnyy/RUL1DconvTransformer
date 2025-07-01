@@ -24,7 +24,7 @@ We use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxen
 | **Softmax**      | 13.34 / 280.7      | 14.38 / 935.57     | 12.94 / 294.65     | 17.83 / 1931.56    |
 | **Sketched Kernel** | 13.59 / 258.89     | 13.19 / 685.31     | 13.17 / 332.02     | 16.12 / 1417.73    |
 
-> *Note:* As dataset size and sequence length grow, the sketched kernel’s \(O(n \cdot r)\) complexity (with \(r \ll n\)) yields both accuracy and speed advantages over softmax.
+> *Note:* As dataset size and sequence length grow, the sketched kernel’s $\(O(n \cdot r)\)$ complexity $(with \(r \ll n\))$ yields both accuracy and speed advantages over softmax.
 
 ---
 
