@@ -9,9 +9,39 @@ This implementation injects **sketched learnable kernel functions** into a Multi
 
 ---
 
-# Dataset
+## Dataset
 
 We use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxena et al., 2008] with specific focus on FD002 and FD004 to highlight improvements in prediction accuracy and inference latency.
+
+---
+
+## Results
+
+### Table 4: Softmax vs. Sketched Kernel Accuracy
+
+| Method           | FD001 RMSE / Score | FD002 RMSE / Score | FD003 RMSE / Score | FD004 RMSE / Score |
+|------------------|--------------------|--------------------|--------------------|--------------------|
+| **Softmax**      | 13.34 / 280.7      | 14.38 / 935.57     | 12.94 / 294.65     | 17.83 / 1931.56    |
+| **Sketched Kernel** | 13.59 / 258.89     | 13.19 / 685.31     | 13.17 / 332.02     | 16.12 / 1417.73    |
+
+> *Note:* As dataset size and sequence length grow, the sketched kernel’s \(O(n \cdot r)\) complexity (with \(r \ll n\)) yields both accuracy and speed advantages over softmax.
+
+---
+
+### Table 5: Function Execution Speed (lower is better)
+
+| Function         | Subset | Calculation Speed (ms) |
+|------------------|--------|------------------------:|
+| **Kernel-based** | FD001  |                  117.82 |
+|                  | FD002  |                  327.42 |
+|                  | FD003  |                  131.96 |
+|                  | FD004  |                  325.40 |
+| **Softmax**      | FD001  |                  119.45 |
+|                  | FD002  |                  394.44 |
+|                  | FD003  |                  119.45 |
+|                  | FD004  |                  401.56 |
+
+> *Experiments were run single‑threaded on an Intel Core i5‑12500.*
 
 ---
 
@@ -31,4 +61,3 @@ We use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxen
 
 5. **Sketching as a Tool for Numerical Linear Algebra**  
    Woodruff, D. P. (2014). _Foundations and Trends® in Theoretical Computer Science_, 10(1–2), 1–157.
-
