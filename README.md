@@ -17,7 +17,7 @@ We use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxen
 
 ## Results
 
-### Table 4: Softmax vs. Sketched Kernel Accuracy
+### Table 1: Softmax vs. Sketched Kernel Accuracy (lower is better)
 
 | Method           | FD001 RMSE / Score | FD002 RMSE / Score | FD003 RMSE / Score | FD004 RMSE / Score |
 |------------------|--------------------|--------------------|--------------------|--------------------|
@@ -28,7 +28,7 @@ We use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxen
 
 ---
 
-### Table 5: Function Execution Speed (lower is better)
+### Table 2: Function Execution Speed (lower is better)
 
 | Function         | Subset | Calculation Speed (ms) |
 |------------------|--------|------------------------:|
