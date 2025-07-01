@@ -11,7 +11,7 @@ This implementation injects **sketched learnable kernel functions** into a Multi
 
 ## Dataset
 
-We use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxena et al., 2008] with specific focus on FD002 and FD004 to highlight improvements in prediction accuracy and inference latency.
+I use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxena et al., 2008] with specific focus on FD002 and FD004 to highlight improvements in prediction accuracy and inference latency.
 
 ---
 
