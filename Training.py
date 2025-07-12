@@ -1,15 +1,15 @@
-import time
-import math
 import torch
+import matplotlib.pyplot as plt
 import torch.nn as nn
-import numpy as np
 from Model import Model
+from Layers import Conv1DMHSA, MHSA
 from Dataset import get_dataloaders
 
-seed = 42
+seed = ...
 torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-
+torch.cuda.manual_seed_all(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -18,60 +18,35 @@ Hyperparameters
 '''
 batch_size = 128
 learning_rate = 0.001
-min_lr = 0.0001
-epochs = 50
+min_lr = 0.00001
+epochs = 120
 weight_decay = 0.00001
-window_size = 50
+window_size = 60
 k_size = 5
-dim = 32
-r = 2
+dim = 64
+r = 8
 num_blocks = 2
 max_rul = 125
-train_workers = 4
+train_workers = 0
+func_type = 'sketch'  # 'sketch' 'softmax'
 '''
 Data loader
 '''
-# 'FD001', 'FD002', 'FD003', 'FD004'
-name = 'FD004'
+name = 'FD002'
 train_file = f'cmapss/train_{name}.txt'
 test_file = f'cmapss/test_{name}.txt'
 truth_file = f'cmapss/RUL_{name}.txt'
 
-train_set, test_set = get_dataloaders(
-    train_file=train_file,
-    test_file=test_file,
-    truth_file=truth_file,
-    window_size=window_size,
-    train_batch=batch_size,
-    train_workers=train_workers
-)
-_, test_cpu = get_dataloaders(
-    train_file=train_file,
-    test_file=test_file,
-    truth_file=truth_file,
-    window_size=window_size,
-    train_batch=1,
-    train_workers=0
-)
+train_set, _, val_set = get_dataloaders(train_file=train_file, test_file=test_file, truth_file=truth_file,
+                                        window_size=window_size, train_batch=batch_size, train_workers=train_workers)
+
 '''
 Training cycle
 '''
-NN = Model(k_size, dim, r, window_size, num_blocks).to(device)
+NN = Model(k_size, dim, r, window_size, num_blocks, func_type).to(device)
 optimizer = torch.optim.AdamW(NN.parameters(), lr=learning_rate, weight_decay=weight_decay)
 loss = nn.MSELoss()
-_lambda = lambda epoch: max(min_lr, min_lr + 0.5 * (1 + math.cos(epoch / epochs * math.pi)))
-scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=_lambda)
-
-
-def cmapss_score(pred, true):
-    diff = pred - true
-    score = np.where(
-        diff < 0,
-        np.exp(-diff / 10) - 1,
-        np.exp(diff / 13) - 1
-    )
-    return np.sum(score)
-
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=min_lr)
 
 def train_epoch(model, loader, opt_fn, loss):
     model.train()
@@ -88,47 +63,75 @@ def train_epoch(model, loader, opt_fn, loss):
     return total_loss / len(loader.dataset)
 
 
-def eval_model(model, test_loader, device):
-    np.random.seed(42)
+def eval_model(model, loader):
     torch.set_num_threads(1)
-    model.to(device)
     model.eval()
 
     predictions = []
     true_values = []
 
     with torch.no_grad():
-        for inputs, targets in test_loader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            preds = model(inputs).cpu().numpy()
-            predictions.extend(preds)
-            true_values.extend(targets.numpy())
+        for inputs, targets in loader:
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+            outputs = model(inputs).squeeze()
+            predictions.append(outputs.cpu())
+            true_values.append(targets.cpu())
 
-    predictions = np.array(predictions)
-    true_values = np.array(true_values)
+        preds = torch.cat(predictions)
+        trues = torch.cat(true_values)
 
-    rmse = np.sqrt(np.mean((predictions - true_values) ** 2))
-    score = cmapss_score(predictions, true_values)
-    return score, rmse
+    mse = torch.mean((preds - trues) ** 2)
+    rmse = torch.sqrt(mse).item()
+    return mse, rmse
 
 
 def main():
+    train_losses, val_losses, val_rmses = [], [], []
+
     for epoch in range(epochs):
-        train = train_epoch(NN, train_set, optimizer, loss)
+        train_loss = train_epoch(NN, train_set, optimizer, loss)
+        train_losses.append(train_loss)
+        parameter_logger.log_epoch(NN, epoch)
+
+        val_mse, epoch_rmse = eval_model(NN, val_set)
+        val_losses.append(val_mse)
+        val_rmses.append(epoch_rmse)
+
         before_lr = optimizer.param_groups[0]["lr"]
         scheduler.step()
         after_lr = optimizer.param_groups[0]["lr"]
-        print(f'Epoch: {epoch + 1}/{epochs}, MSE loss: {train:.4f}, learning rate: {before_lr:.6f} -> {after_lr:.6f}')
+        print(
+            f'Epoch: {epoch + 1}/{epochs}, MSE: {train_loss:.4f}, Val.MSE: {val_mse:.4f}, Val.RMSE: {epoch_rmse:.4f}, '
+            f'learning rate: {before_lr:.6f} -> {after_lr:.6f}')
 
-    start_time = time.time()
-    cpu = torch.device('cpu')
-    test_score, test_rmse = eval_model(NN, test_cpu, cpu)
-    elapsed = time.time() - start_time
-    print(f"Evaluation time = {(elapsed * 1000):.2f} ms")
-    print(f"NASA Score: {test_score:.2f}, RMSE: {test_rmse:.2f}")
+    actual_epochs = len(train_losses)
 
-    torch.save(NN, f'RULformer_{name}.pt')
-    print(f"Model saved to RULformer_{name}.pt")
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(1, actual_epochs + 1), train_losses, 'b-', label='Training Loss')
+    plt.plot(range(1, actual_epochs + 1), val_losses, 'r-', label='Validation Loss')
+    plt.title('Training Loss per Epoch')
+    plt.xlabel('Epoch')
+    plt.ylabel('MSE Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(f'loss_{name}.png')
+    plt.show()
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(1, actual_epochs + 1), train_losses, 'b-', label='Validation RMSE')
+    plt.title('RMSE per Epoch')
+    plt.xlabel('Epoch')
+    plt.ylabel('RMSE')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(f'validation_RMSE_{name}.png')
+    plt.show()
+
+    parameter_logger.plot()
+
+    torch.save(NN, f'RULformer_{name}_{func_type}.pt')
+    print(f"Model saved to RULformer_{name}_{func_type}.pt")
 
 
 if __name__ == '__main__':
