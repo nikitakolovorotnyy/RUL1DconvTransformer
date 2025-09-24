@@ -46,7 +46,7 @@ class LearnableEmbedding(nn.Module):
         return x + self.pe[:, :, :x.size(2)]
 
 
-class Sketching(nn.Module):
+class Sketching_old(nn.Module):
     """
     Matrix approximation through a sketching technique. Inspired with Polysketchformer and TensorSketch methods.
     Args:
@@ -89,6 +89,69 @@ class Sketching(nn.Module):
 
     def forward(self, x: torch.Tensor):
         return self.sketch(x)
+        
+
+class Sketching(nn.Module):
+    """
+    Matrix approximation through a sketching technique. Inspired with Polysketchformer and TensorSketch methods.
+    Args:
+        dim - hidden layer number of features.
+        r - sketched space dimension.
+        p - kernel's power.
+    """
+    def __init__(self, 
+                 dim: int, 
+                 r: int, 
+                 p: int, 
+                 learnable: bool = True):
+        super().__init__()
+        assert p >= 2 and p % 2 == 0, "Only even p >= 2 supported"
+        self.p = p
+        self.r = r
+        self.dim = dim
+
+        G_init = torch.randn(dim, 2 * r) * (1.0 / (r ** 0.5))
+        if learnable:
+            self.G_comb = nn.Parameter(G_init)
+        else:
+            self.register_buffer("G_comb", G_init)
+
+    def _project_batched_once(self, x: torch.Tensor):
+        """
+        x: (B, H, S, D) 
+        returns: tuple(P1, P2) with shape of (B,H,S,r) 
+        Computes one 2D matmul: reshape -> (B*H*S, D) @ (D, 2r) -> (B,H,S,2r)
+        """
+        G = self.G_comb
+        if G.device != x.device:
+            G = G.to(x.device)
+
+        x.dim() == 4
+        B, H, S, D = x.shape
+        x2 = x.reshape(B * H * S, D)
+        proj = torch.matmul(x2, G)            # (B*H*S, 2r)
+        proj = proj.view(B, H, S, 2*self.r)
+        proj.mul_(1.0 / (self.r ** 0.5))           # in-place scaling
+        P1, P2 = proj.split(self.r, dim=-1)
+        return P1, P2 
+
+    def forward(self, x: torch.Tensor):
+        # (B,H,S,D) as an input
+        P1, P2 = self._project_batched_once(x)
+
+        if self.p == 2:
+            return P1 * P2   
+        
+        elif self.p == 4:
+            base = P1 * P2   
+            return base * base 
+         
+        else:
+            out = P1 * P2
+            k = int(self.p.bit_length() - 1)
+            for _ in range(k - 1):
+                out = out * out
+            return out
 
 
 class Conv1DMHSA(nn.Module):
