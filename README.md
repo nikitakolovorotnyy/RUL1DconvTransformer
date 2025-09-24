@@ -11,7 +11,7 @@ This implementation injects **sketched learnable kernel functions** into a Multi
 
 ## Dataset
 
-I use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxena et al., 2008] with specific focus on FD002 and FD004 to highlight improvements in prediction accuracy and inference latency.
+I use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxena et al., 2008] with specific focus on FD002 to highlight improvements in prediction accuracy and inference latency.
 
 ---
 
@@ -19,10 +19,10 @@ I use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxena
 
 ### Table 1: Softmax vs. Sketched Kernel Accuracy (lower is better)
 
-| Method           | FD001 RMSE / Score | FD002 RMSE / Score | FD003 RMSE / Score | FD004 RMSE / Score |
-|------------------|--------------------|--------------------|--------------------|--------------------|
-| **Softmax**      | 13.34 / 280.7      | 14.38 / 935.57     | 12.94 / 294.65     | 17.83 / 1931.56    |
-| **Sketched Kernel** | 13.59 / 258.89     | 13.19 / 685.31     | 13.17 / 332.02     | 16.12 / 1417.73    |
+| Method           | FD002 RMSE / Score | 
+|------------------|--------------------|
+| **Softmax**      | 14.25 / 802.73      | 
+| **Sketched Kernel** | 12.81 / 531.88  | 
 
 > *Note:* As dataset size and sequence length grow, the sketched kernel’s $\(O(n \cdot r)\)$ complexity $(with \(r \ll n\))$ yields both accuracy and speed advantages over softmax.
 
@@ -32,16 +32,13 @@ I use the **Turbofan Engine Degradation Simulation (C‑MAPSS)** dataset [Saxena
 
 | Function         | Subset | Calculation Speed (ms) |
 |------------------|--------|------------------------:|
-| **Kernel-based** | FD001  |                  117.82 |
-|                  | FD002  |                  327.42 |
-|                  | FD003  |                  131.96 |
-|                  | FD004  |                  325.40 |
-| **Softmax**      | FD001  |                  119.45 |
-|                  | FD002  |                  394.44 |
-|                  | FD003  |                  119.45 |
-|                  | FD004  |                  401.56 |
+| **W/o sketching** | FD002  |                  80.5 |
+| **Sketched kernel** | FD002  |               71.82 |
+| **Softmax**      | FD002  |                  71.45 |
 
-> *Experiments were run single‑threaded on an Intel Core i5‑12500.*
+
+
+> *Experiments were run single‑threaded on Apple silicon M4 SoC (10 cpu/10 gpu cores). Kernels degree is set to 4, r=8. It's worth noting that sketching module currently has no c++ implementation, which means more out-of-place operations and functions calls.*
 
 ---
 
