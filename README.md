@@ -1,4 +1,4 @@
-# Lightweight Encoder–Transformer with 1D Convolutional Projections
+# Lightweight Encoder–Transformer 
 
 This implementation injects **sketched learnable kernel functions** into a Multi‑Head Attention layer, replacing softmax, and applies it to the **CMAPSS NASA dataset**. It demonstrates both accuracy and latency improvements on the **FD002** subset.
 
